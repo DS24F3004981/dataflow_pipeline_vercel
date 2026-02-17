@@ -5,10 +5,8 @@ from datetime import datetime
 import sqlite3
 
 app = FastAPI()
+DB_NAME = "/tmp/pipeline.db"
 
-DB_NAME = "/tmp/pipeline.db"  # Vercel serverless me temp storage
-
-# Create table if not exists
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -31,17 +29,14 @@ class PipelineRequest(BaseModel):
     email: str
     source: str
 
-# Simple FREE AI replacement
 def analyze_text(text):
     text_lower = text.lower()
-
     if "excellent" in text_lower or "great" in text_lower:
         sentiment = "enthusiastic"
     elif "bad" in text_lower or "error" in text_lower:
         sentiment = "critical"
     else:
         sentiment = "objective"
-
     analysis = f"This comment discusses: {text[:50]}. The tone appears {sentiment}."
     return analysis, sentiment
 
@@ -49,7 +44,6 @@ def analyze_text(text):
 def run_pipeline(request: PipelineRequest):
     items_output = []
     errors = []
-
     try:
         response = requests.get(
             "https://jsonplaceholder.typicode.com/comments?postId=1",
@@ -59,14 +53,11 @@ def run_pipeline(request: PipelineRequest):
         data = response.json()
     except Exception as e:
         return {"error": f"API Fetch Failed: {str(e)}"}
-
     for item in data[:3]:
         try:
             original_text = item["body"]
             analysis, sentiment = analyze_text(original_text)
             timestamp = datetime.utcnow().isoformat()
-
-            # Store in SQLite
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             cursor.execute("""
@@ -75,7 +66,6 @@ def run_pipeline(request: PipelineRequest):
             """, (original_text, analysis, sentiment, request.source, timestamp))
             conn.commit()
             conn.close()
-
             items_output.append({
                 "original": original_text,
                 "analysis": analysis,
@@ -83,14 +73,10 @@ def run_pipeline(request: PipelineRequest):
                 "stored": True,
                 "timestamp": timestamp
             })
-
         except Exception as e:
             errors.append(str(e))
             continue
-
-    # Notification (console)
     print(f"Notification sent to: {request.email}")
-
     return {
         "items": items_output,
         "notificationSent": True,
