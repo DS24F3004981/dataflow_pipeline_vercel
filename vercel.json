@@ -1,15 +1,16 @@
 {
   "version": 2,
   "functions": {
-    "api/pipeline.py": {
+    "api/index.py": {
       "runtime": "python@3.11"
     }
   },
   "routes": [
     {
       "src": "/pipeline",
-      "dest": "api/pipeline.py"
+      "dest": "api/index.py"
     }
   ]
 }
+
 
